@@ -13,6 +13,7 @@ import {
   UpdateQuery,
   UpdateWriteOpResult,
 } from 'mongoose';
+import { number } from 'zod';
 
 export type lean<T> = FlattenMaps<T>;
 
@@ -59,7 +60,13 @@ export abstract class DatabaseRepository<
     options?: QueryOptions<TDocument> | undefined;
     page?: number | 'all';
     size?: number;
-  }): Promise<TDocument[] | [] | lean<TDocument>[] | any> {
+  }): Promise<{
+    docsCount?: number;
+    pages?: number;
+    limit?: number;
+    currentPage?: number | undefined;
+    result: TDocument[] | lean<TDocument>[];
+  }> {
     let docsCount: number | undefined = undefined;
     let pages: number | undefined = undefined;
     if (page !== 'all') {
@@ -197,10 +204,26 @@ export abstract class DatabaseRepository<
     update?: UpdateQuery<TDocument>;
     options?: QueryOptions<TDocument> | null;
   }): Promise<TDocument | lean<TDocument> | null> {
+    if (Array.isArray(update)) {
+      update.push({
+        $set: {
+          __v: { $add: ['$__v', 1] },
+        },
+      });
+      return await this.model.findOneAndUpdate(filter || {}, update, options);
+    }
     return await this.model.findOneAndUpdate(
       filter,
       { ...update, $inc: { __v: 1 } },
       options,
     );
+  }
+
+  async findOneAndDelete({
+    filter,
+  }: {
+    filter?: RootFilterQuery<TRawDocument>;
+  }): Promise<TDocument | lean<TDocument> | null> {
+    return await this.model.findByIdAndDelete(filter || {});
   }
 }

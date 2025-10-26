@@ -13,7 +13,7 @@ import {
   RoleEnum,
 } from 'src/common/enums';
 import { OtpDocument } from './otp.model';
-import { generateHash } from 'src/common';
+import { generateHash, IUser } from 'src/common';
 
 @Schema({
   strictQuery: true,
@@ -21,7 +21,7 @@ import { generateHash } from 'src/common';
   toObject: { virtuals: true },
   toJSON: { virtuals: true },
 })
-export class User {
+export class User  implements IUser{
   @Prop({
     type: String,
     required: true,
@@ -108,6 +108,9 @@ export class User {
 
   @Virtual()
   otp: OtpDocument[];
+
+  @Prop({ type: String })
+  profilePicture: string;
 }
 
 export type UserDocument = HydratedDocument<User>;

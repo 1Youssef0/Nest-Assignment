@@ -1,6 +1,37 @@
+import { Types } from 'mongoose';
+import { OtpDocument } from 'src/DB';
+import { GenderEnum, ProviderEnum, RoleEnum } from '../enums';
+
 export interface IUser {
-  userName: string;
+  _id?: Types.ObjectId;
+
+  firstName: string;
+
+  lastName: string;
+
+  userName?: string;
+
   email: string;
-  password: string;
-  id: number;
+
+  confirmedAt?: Date;
+
+  password?: string;
+
+  provider: ProviderEnum;
+
+  role: RoleEnum;
+
+  gender: GenderEnum;
+
+  preferredLanguage: GenderEnum;
+
+  changeCredentialsTime?: Date;
+
+  otp?: OtpDocument[];
+
+  profilePicture?: string;
+
+  createdAt?: Date;
+
+  updatedAt?: Date;
 }
