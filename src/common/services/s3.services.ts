@@ -260,26 +260,26 @@ export class S3Service {
     return await  this.s3client.send(command);
   };
 
-  // deleteFiles = async ({
-  //   Bucket = process.env.AWS_BUCKET_NAME as string,
-  //   urls,
-  //   Quiet = false,
-  // }: {
-  //   Bucket?: string;
-  //   urls: string[];
-  //   Quiet?: boolean | undefined;
-  // }): Promise<DeleteObjectsCommandOutput> => {
-  //   const command = new DeleteObjectsCommand({
-  //     Bucket,
-  //     Delete: {
-  //       // Objects: urls.map((url) => {
-  //       //   return { key: url };
-  //       // }),
-  //       Quiet,
-  //     },
-  //   });
-  //   return await this.s3client.send(command);
-  // };
+  deleteFiles = async ({
+    Bucket = process.env.AWS_BUCKET_NAME as string,
+    urls,
+    Quiet = false,
+  }: {
+    Bucket?: string;
+    urls: string[];
+    Quiet?: boolean | undefined;
+  }): Promise<DeleteObjectsCommandOutput> => {
+    const command = new DeleteObjectsCommand({
+      Bucket,
+      Delete: {
+        Objects: urls.map((url) => {
+          return { Key: url };
+        }),
+        Quiet,
+      },
+    });
+    return await this.s3client.send(command);
+  };
 
   listDirectoryFiles = async ({
     Bucket = process.env.AWS_BUCKET_NAME as string,
@@ -296,25 +296,25 @@ export class S3Service {
     return await this.s3client.send(command);
   };
 
-  // deleteFolderByPrefix = async ({
-  //   Bucket = process.env.AWS_BUCKET_NAME as string,
-  //   path,
-  //   Quiet = false,
-  // }: {
-  //   Bucket?: string;
-  //   path: string;
-  //   Quiet?: boolean;
-  // }): Promise<DeleteObjectsCommandOutput> => {
-  //   const fileList = await this.listDirectoryFiles({ Bucket, path });
+  deleteFolderByPrefix = async ({
+    Bucket = process.env.AWS_BUCKET_NAME as string,
+    path,
+    Quiet = false,
+  }: {
+    Bucket?: string;
+    path: string;
+    Quiet?: boolean;
+  }): Promise<DeleteObjectsCommandOutput> => {
+    const fileList = await this.listDirectoryFiles({ Bucket, path });
 
-  //   if (!fileList?.Contents?.length) {
-  //     throw new BadRequestException('empty directory');
-  //   }
+    if (!fileList?.Contents?.length) {
+      throw new BadRequestException('empty directory');
+    }
 
-  //   const urls: string[] = fileList.Contents.map((file) => {
-  //     return file.Key as string;
-  //   });
+    const urls: string[] = fileList.Contents.map((file) => {
+      return file.Key as string;
+    });
 
-  //   return await this.deleteFiles({ urls, Bucket, Quiet });
-  // };
+    return await this.deleteFiles({ urls, Bucket, Quiet });
+  };
 }

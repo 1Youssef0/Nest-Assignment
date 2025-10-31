@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { GetAllDto, UpdateCategoryDto } from './dto/update-category.dto';
+import {  UpdateCategoryDto } from './dto/update-category.dto';
 import {
   BrandRepository,
   CategoryDocument,
@@ -15,7 +15,7 @@ import {
 import { S3Service } from 'src/common/services';
 import { Types } from 'mongoose';
 import { lean } from 'src/DB/repository/database.repository';
-import { FolderEnum } from 'src/common';
+import { FolderEnum, GetAllDto } from 'src/common';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -299,4 +299,7 @@ export class CategoryService {
     }
     return Category;
   }
+
+  
+
 }

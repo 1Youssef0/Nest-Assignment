@@ -5,7 +5,7 @@ import {
   SchemaFactory,
   Virtual,
 } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import {
   GenderEnum,
   LanguageEnum,
@@ -13,7 +13,7 @@ import {
   RoleEnum,
 } from 'src/common/enums';
 import { OtpDocument } from './otp.model';
-import { generateHash, IUser } from 'src/common';
+import { generateHash, IProduct, IUser } from 'src/common';
 
 @Schema({
   strictQuery: true,
@@ -21,7 +21,7 @@ import { generateHash, IUser } from 'src/common';
   toObject: { virtuals: true },
   toJSON: { virtuals: true },
 })
-export class User  implements IUser{
+export class User implements IUser {
   @Prop({
     type: String,
     required: true,
@@ -111,6 +111,9 @@ export class User  implements IUser{
 
   @Prop({ type: String })
   profilePicture: string;
+
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }] })
+  wishlist?: Types.ObjectId[];
 }
 
 export type UserDocument = HydratedDocument<User>;

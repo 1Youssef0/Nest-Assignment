@@ -203,7 +203,7 @@ export abstract class DatabaseRepository<
     filter?: RootFilterQuery<TRawDocument>;
     update?: UpdateQuery<TDocument>;
     options?: QueryOptions<TDocument> | null;
-  }): Promise<TDocument | lean<TDocument> | null> {
+  }): Promise<TDocument | null> {
     if (Array.isArray(update)) {
       update.push({
         $set: {
@@ -214,7 +214,7 @@ export abstract class DatabaseRepository<
     }
     return await this.model.findOneAndUpdate(
       filter,
-      { ...update, $inc: { __v: 1 } },
+      {  $inc: { __v: 1 } , ...update },
       options,
     );
   }

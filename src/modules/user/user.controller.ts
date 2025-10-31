@@ -1,38 +1,33 @@
 import {
   Controller,
   Get,
-  Headers,
   MaxFileSizeValidator,
   ParseFilePipe,
   Patch,
   UploadedFile,
-  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RoleEnum, StorageEnum, successResponse, User } from 'src/common';
 import { Auth } from 'src/common/decorators/auth.decorator';
 import type { UserDocument } from 'src/DB';
-import { PreferredLanguageInterceptor } from 'src/common/interceptors';
-import { delay, Observable, of } from 'rxjs';
-import {
-  FileFieldsInterceptor,
-  FileInterceptor,
-  FilesInterceptor,
-} from '@nestjs/platform-express';
-import {
-  cloudFileUpload,
-  fileValidation,
-  localFileUpload,
-} from 'src/common/utils/multer';
-import type { IMulterFile, IResponse, IUser } from './../../common/interfaces';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { cloudFileUpload, fileValidation } from 'src/common/utils/multer';
+import type { IResponse } from './../../common/interfaces';
 import { ProfileResponse } from './entities/user.entity';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-
+  @Auth([RoleEnum.admin, RoleEnum.superAdmin, RoleEnum.user])
+  @Get()
+  async profile(
+    @User() user: UserDocument,
+  ): Promise<IResponse<ProfileResponse>> {
+    const profile = await this.userService.profile(user);
+    return successResponse<ProfileResponse>({ data: { profile } });
+  }
 
   @UseInterceptors(
     FileInterceptor(

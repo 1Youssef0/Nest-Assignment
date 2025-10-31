@@ -8,9 +8,9 @@ import { CreateBrandDto } from './dto/create-brand.dto';
 import { BrandDocument, BrandRepository, UserDocument } from 'src/DB';
 import { S3Service } from 'src/common/services';
 import { Types } from 'mongoose';
-import { GetAllDto, UpdateBrandDto } from './dto/update-brand.dto';
+import {  UpdateBrandDto } from './dto/update-brand.dto';
 import { lean } from 'src/DB/repository/database.repository';
-import { FolderEnum } from 'src/common';
+import { FolderEnum, GetAllDto } from 'src/common';
 // import { UpdateBrandDto } from './dto/update-brand.dto';
 
 @Injectable()

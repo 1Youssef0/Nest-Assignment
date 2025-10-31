@@ -17,15 +17,14 @@ import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import {
   CategoryParamsDto,
-  GetAllDto,
   UpdateCategoryDto,
 } from './dto/update-category.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { cloudFileUpload, fileValidation } from 'src/common/utils/multer';
-import { Auth, IResponse, successResponse, User } from 'src/common';
+import { Auth, GetAllDto, GetAllResponse, IResponse, successResponse, User } from 'src/common';
 import type { UserDocument } from 'src/DB';
 import { endPoint } from './category.authorization';
-import { CategoryResponse, GetAllResponse } from './entities/category.entity';
+import { CategoryResponse } from './entities/category.entity';
 
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 @Controller('category')

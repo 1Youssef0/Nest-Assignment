@@ -5,12 +5,4 @@ export class CategoryResponse {
 }
 
 
-export class GetAllResponse {
-  result: {
-    docsCount?: number;
-    pages?: number;
-    limit?: number;
-    currentPage?: number | undefined;
-    result: ICategory[];
-  };
-}
+
