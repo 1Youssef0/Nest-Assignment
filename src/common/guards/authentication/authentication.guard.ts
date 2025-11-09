@@ -1,9 +1,11 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { Observable } from 'rxjs';
 import { tokenName } from 'src/common/decorators';
 import { TokenEnum } from 'src/common/enums';
 import { TokenService } from 'src/common/services/token.service';
+import { getSocketAuth } from 'src/common/utils/socket';
 
 @Injectable()
 export class AuthenticationGuard implements CanActivate {
@@ -12,23 +14,40 @@ export class AuthenticationGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const tokenType: TokenEnum = this.reflector.getAllAndOverride<TokenEnum>(
-      tokenName,
-      [context.getHandler()],
-    )?? TokenEnum.access;
+    const tokenType: TokenEnum =
+      this.reflector.getAllAndOverride<TokenEnum>(tokenName, [
+        context.getHandler(),
+      ]) ?? TokenEnum.access;
 
     let req: any;
     let authorization: string = '';
 
-    switch (context.getType()) {
+    switch (context.getType<string>()) {
       case 'http':
         const httpCtx = context.switchToHttp();
         req = httpCtx.getRequest();
         authorization = req.headers.authorization;
         break;
 
+      case 'ws':
+        const ws_context = context.switchToWs();
+        req = ws_context.getClient();
+        authorization = getSocketAuth(req);
+        console.log(req);
+
+        break;
+
+      case 'graphql':
+         req = GqlExecutionContext.create(context).getContext().req;
+        authorization = req.headers.authorization
+
+        break; 
       default:
         break;
+    }
+
+    if (!authorization) {
+      return false;
     }
 
     const { decoded, user } = await this.tokenService.decodedToken({

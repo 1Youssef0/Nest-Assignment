@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { OtpDocument } from 'src/DB';
-import { GenderEnum, ProviderEnum, RoleEnum } from '../enums';
+import { GenderEnum, LanguageEnum, ProviderEnum, RoleEnum } from '../enums';
 import { IProduct } from './product.interface';
 
 export interface IUser {
@@ -24,7 +24,7 @@ export interface IUser {
 
   gender: GenderEnum;
 
-  preferredLanguage: GenderEnum;
+  preferredLanguage: LanguageEnum;
 
   changeCredentialsTime?: Date;
 

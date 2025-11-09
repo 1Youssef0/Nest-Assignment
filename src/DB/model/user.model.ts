@@ -98,7 +98,7 @@ export class User implements IUser {
     enum: LanguageEnum,
     default: LanguageEnum.EN,
   })
-  preferredLanguage: GenderEnum;
+  preferredLanguage: LanguageEnum;
 
   @Prop({
     type: Date,
@@ -134,3 +134,5 @@ userSchema.pre('save', async function (next) {
 export const UserModel = MongooseModule.forFeature([
   { name: User.name, schema: userSchema },
 ]);
+
+export const connectedSockets = new Map<string, string[]>();

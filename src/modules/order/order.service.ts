@@ -13,13 +13,21 @@ import {
   ProductRepository,
   UserDocument,
 } from 'src/DB';
-import { IOrderProduct, OrderStatusEnum, PaymentEnum } from 'src/common';
+import {
+  GetAllDto,
+  GetAllGraphDto,
+  IOrderProduct,
+  OrderStatusEnum,
+  PaymentEnum,
+} from 'src/common';
 import { randomUUID } from 'crypto';
 import { CartService } from '../cart/cart.service';
 import { PaymentService } from 'src/common/services';
 import { Types } from 'mongoose';
 import Stripe from 'stripe';
-import type{ Request } from 'express';
+import type { Request } from 'express';
+import { RealtimeGateway } from '../gateway/gateway';
+import { lean } from 'src/DB/repository/database.repository';
 
 @Injectable()
 export class OrderService {
@@ -28,31 +36,29 @@ export class OrderService {
     private readonly orderRepository: OrderRepository,
     private readonly productRepository: ProductRepository,
     private readonly cartService: CartService,
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-
-  async webhook(req:Request){
-   const event =  await this.paymentService.webhook(req)
-   const {orderId} = event.data.object.metadata as {orderId : string}
-   const order = await this.orderRepository.findOneAndUpdate({
-    filter:{
-      _id:Types.ObjectId.createFromHexString(orderId),
-      status:OrderStatusEnum.Pending,
-      paymentType:PaymentEnum.Card
-    },
-    update:{
-      paidAt:new Date(),
-      status:OrderStatusEnum.Placed
+  async webhook(req: Request) {
+    const event = await this.paymentService.webhook(req);
+    const { orderId } = event.data.object.metadata as { orderId: string };
+    const order = await this.orderRepository.findOneAndUpdate({
+      filter: {
+        _id: Types.ObjectId.createFromHexString(orderId),
+        status: OrderStatusEnum.Pending,
+        paymentType: PaymentEnum.Card,
+      },
+      update: {
+        paidAt: new Date(),
+        status: OrderStatusEnum.Placed,
+      },
+    });
+    if (!order) {
+      throw new NotFoundException('fail to find matching order');
     }
-   })
-   if (!order) {
-    throw new NotFoundException("fail to find matching order")
-   }
 
-   await this.paymentService.confirmPaymentIntent(order.intentId)
+    await this.paymentService.confirmPaymentIntent(order.intentId);
   }
-
-
 
   async create(
     createOrderDto: CreateOrderDto,
@@ -83,7 +89,7 @@ export class OrderService {
       });
       total += finalPrice;
     }
- 
+
     const [order] = await this.orderRepository.create({
       data: [
         {
@@ -100,57 +106,64 @@ export class OrderService {
       throw new BadRequestException('fail to create this order instance');
     }
 
+    const stockProducts: { productId: Types.ObjectId; stock: number }[] = [];
+
     for (const product of cart.products) {
-      await this.productRepository.updateOne({
-        filter: { _id: product.productId },
-        update: { $inc: { __v: 1, stock: -product.quantity } },
+      const updateProduct = (await this.productRepository.findOneAndUpdate({
+        filter: {
+          _id: product.productId,
+          stock: { $gte: product.quantity },
+        },
+        update: {
+          $inc: { __v: 1, stock: -product.quantity },
+        },
+      })) as ProductDocument;
+      stockProducts.push({
+        productId: updateProduct._id,
+        stock: updateProduct?.stock,
       });
     }
 
-    await this.cartService.remove(user);
+    this.realtimeGateway.changeProductStock(stockProducts);
+
+    // await this.cartService.remove(user);
 
     return order;
   }
 
-
-
   async cancel(
-  orderId: Types.ObjectId,
-  user: UserDocument,
-): Promise<OrderDocument> {
-  const order = await this.orderRepository.findOneAndUpdate({
-    filter: {
-      _id: orderId,
-      status: { $ne: OrderStatusEnum.Canceled },
-    },
-    update: {
-      status: OrderStatusEnum.Canceled,
-      updatedBy: user._id,
-    },
-    options: { new: true },
-  });
-
-  if (!order) {
-    throw new NotFoundException('fail to find matching order');
-  }
-
-  if (order.paymentType === PaymentEnum.Card && order.intentId) {
-    await this.paymentService.cancelPaymentIntent(order.intentId);
-  }
-
-  for (const item of order.products) {
-    await this.productRepository.updateOne({
-      filter: { _id: item.productId },
-      update: { $inc: { stock: item.quantity } },
+    orderId: Types.ObjectId,
+    user: UserDocument,
+  ): Promise<OrderDocument> {
+    const order = await this.orderRepository.findOneAndUpdate({
+      filter: {
+        _id: orderId,
+        status: { $ne: OrderStatusEnum.Canceled },
+      },
+      update: {
+        status: OrderStatusEnum.Canceled,
+        updatedBy: user._id,
+      },
+      options: { new: true },
     });
+
+    if (!order) {
+      throw new NotFoundException('fail to find matching order');
+    }
+
+    if (order.paymentType === PaymentEnum.Card && order.intentId) {
+      await this.paymentService.cancelPaymentIntent(order.intentId);
+    }
+
+    for (const item of order.products) {
+      await this.productRepository.updateOne({
+        filter: { _id: item.productId },
+        update: { $inc: { stock: item.quantity } },
+      });
+    }
+
+    return order as OrderDocument;
   }
-
-  
-
-  return order as OrderDocument;
-}
-
-
 
   async checkout(orderId: Types.ObjectId, user: UserDocument) {
     const order = await this.orderRepository.findOne({
@@ -178,7 +191,7 @@ export class OrderService {
         percent_off: order.discount * 100,
       });
 
-      discounts.push({ coupon: coupon.id }); 
+      discounts.push({ coupon: coupon.id });
     }
 
     const session = await this.paymentService.checkoutSession({
@@ -199,34 +212,51 @@ export class OrderService {
       }),
     });
 
-
-
     const method = await this.paymentService.createPaymentMethod({
-      type:"card",
-      card:{
-        token:"tok_visa"
-      }
-    })
-
+      type: 'card',
+      card: {
+        token: 'tok_visa',
+      },
+    });
 
     const intent = await this.paymentService.createPaymentIntent({
-      amount:order.subtotal * 100,
-      currency:'egp',
-      payment_method:method.id,
-      automatic_payment_methods:{
-        enabled:true,
-        allow_redirects:"never"
-      }
-    })
+      amount: order.subtotal * 100,
+      currency: 'egp',
+      payment_method: method.id,
+      automatic_payment_methods: {
+        enabled: true,
+        allow_redirects: 'never',
+      },
+    });
 
-    order.intentId = intent.id
-    await order.save()
+    order.intentId = intent.id;
+    await order.save();
 
     return session.url as string;
   }
 
-  findAll() {
-    return `This action returns all order`;
+  async findAll(
+    data: GetAllGraphDto = {},
+    archive: boolean = false,
+  ): Promise<{
+    docsCount?: number;
+    pages?: number;
+    limit?: number;
+    currentPage?: number | undefined;
+    result: OrderDocument[] | lean<OrderDocument>[];
+  }> {
+    const { page, size, search } = data;
+    const result = await this.orderRepository.paginate({
+      filter: {
+        ...(archive ? { paranoId: false, freezedAt: { $exists: true } } : {}),
+      },
+      page,
+      size,
+      options: {
+        populate: [{ path: 'createdBy' }],
+      },
+    });
+    return result;
   }
 
   findOne(id: number) {

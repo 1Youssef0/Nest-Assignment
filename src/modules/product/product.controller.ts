@@ -12,6 +12,7 @@ import {
   UsePipes,
   ValidationPipe,
   Query,
+  Inject,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -36,11 +37,40 @@ import {
   User,
 } from 'src/common';
 import { ProductResponse } from './entities/product.entity';
+import { Cache, CACHE_MANAGER, CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
-@UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+
+
+
 @Controller('product')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    // @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly productService: ProductService) {}
+
+
+
+
+
+    // @CacheTTL(10000)
+    // @UseInterceptors(CacheInterceptor)
+    // @Get("test")
+    // async test(){
+    //   console.log("here");
+      
+    //   let user = await this.cacheManager.get("User");
+    //   if (!user) {
+    //     //DB
+    //     user = {message:`Done at ${Date.now()}` , name:"youssef"}
+    //     await this.cacheManager.set("user" , user , 25000)
+    //   }
+    //   return user
+    // }
+
+
+
+
+
 
   @UseInterceptors(
     FileInterceptor(
